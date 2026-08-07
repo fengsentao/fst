@@ -3,10 +3,11 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-一个功能完整的A股量化交易框架，支持策略开发、回测分析、风控管理和数据可视化。
+一个功能完整的A股量化交易框架，支持策略开发、回测分析、风控管理和数据可视化。内置 Web 管理界面。
 
 ## ✨ 特性
 
+- 🌐 **Web管理界面**: FastAPI + Vue3 前后端分离，支持图表分析
 - 🎯 **8种内置策略**: 双均线、MACD、RSI、布林带、KDJ、网格、海龟、多因子
 - 📊 **12+技术指标**: MA、EMA、MACD、RSI、KDJ、BOLL、ATR、CCI、OBV 等
 - 🔄 **完整回测引擎**: 支持佣金、印花税、滑点、100股整数约束
@@ -30,6 +31,29 @@ pip install -e .
 ```
 
 ## 🚀 快速开始
+
+### Web界面 (推荐)
+
+```bash
+# 安装Web依赖
+pip install -r web/requirements.txt
+
+# 启动Web服务
+bash web/start.sh
+
+# 或直接启动
+python -m uvicorn web.backend.app:app --host 0.0.0.0 --port 8000
+
+# 访问: http://localhost:8000
+# API文档: http://localhost:8000/docs
+```
+
+Web界面功能:
+- 📊 仪表盘 - 系统总览和快捷操作
+- 🔬 策略回测 - 选择股票和策略，运行回测，查看收益曲线和交易记录
+- 🎯 策略管理 - 查看所有内置策略说明和参数
+- 📈 行情数据 - 查询个股行情和技术指标
+- 📋 回测记录 - 查看历史回测任务
 
 ### 命令行使用
 
