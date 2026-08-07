@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FST-Quant | A股量化交易系统</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f1117;
+            --bg-card: #1a1d27;
+            --bg-hover: #232738;
+            --border: #2a2e3f;
+            --text: #e4e6ed;
+            --text-dim: #8b8fa3;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --green: #22c55e;
+            --green-dim: rgba(34,197,94,0.15);
+            --red: #ef4444;
+            --red-dim: rgba(239,68,68,0.15);
+            --yellow: #eab308;
+            --radius: 12px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.3);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg); color: var(--text);
+            min-height: 100vh;
+        }
+        #app { display: flex; min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px; background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            padding: 24px 16px; flex-shrink: 0;
+            display: flex; flex-direction: column;
+        }
+        .logo { font-size: 22px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+        .logo span { color: var(--text-dim); font-weight: 400; font-size: 13px; display: block; }
+        .nav { margin-top: 32px; flex: 1; }
+        .nav-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 16px; border-radius: 8px; cursor: pointer;
+            color: var(--text-dim); font-size: 14px; font-weight: 500;
+            transition: all 0.2s; margin-bottom: 4px;
+        }
+        .nav-item:hover { background: var(--bg-hover); color: var(--text); }
+        .nav-item.active { background: rgba(99,102,241,0.15); color: var(--accent); }
+        .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+
+        /* Main */
+        .main { flex: 1; padding: 32px; overflow-y: auto; }
+        .page-title { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+        .page-subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 32px; }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
+        }
+        .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        /* Grid */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+        /* Form */
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 6px; font-weight: 500; }
+        .form-input, .form-select {
+            width: 100%; padding: 10px 14px; background: var(--bg);
+            border: 1px solid var(--border); border-radius: 8px;
+            color: var(--text); font-size: 14px; outline: none;
+            transition: border 0.2s;
+        }
+        .form-input:focus, .form-select:focus { border-color: var(--accent); }
+        .form-select { cursor: pointer; appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b8fa3' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 12px center;
+        }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 8px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* Stats */
+        .stat-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 20px;
+        }
+        .stat-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .stat-value { font-size: 28px; font-weight: 700; }
+        .stat-value.positive { color: var(--green); }
+        .stat-value.negative { color: var(--red); }
+        .stat-sub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+        /* Table */
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px 16px; font-size: 12px; color: var(--text-dim);
+             text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+        td { padding: 12px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
+        tr:hover td { background: var(--bg-hover); }
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge-buy { background: var(--green-dim); color: var(--green); }
+        .badge-sell { background: var(--red-dim); color: var(--red); }
+
+        /* Strategy cards */
+        .strategy-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 20px; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .strategy-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .strategy-card.selected { border-color: var(--accent); background: rgba(99,102,241,0.08); }
+        .strategy-card h3 { font-size: 16px; margin-bottom: 8px; }
+        .strategy-card p { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+
+        /* Chart */
+        .chart-container { position: relative; height: 350px; width: 100%; }
+        .chart-container canvas { width: 100% !important; }
+
+        /* Progress */
+        .progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin: 12px 0; }
+        .progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s; }
+
+        /* Animations */
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+        /* Loading */
+        .loading { display: flex; align-items: center; justify-content: center; padding: 60px; color: var(--text-dim); }
+        .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent);
+                   border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Empty state */
+        .empty { text-align: center; padding: 60px 20px; color: var(--text-dim); }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div>
+            <div class="logo">FST-Quant<span>A股量化交易系统</span></div>
+        </div>
+        <nav class="nav">
+            <div class="nav-item" :class="{active: page==='dashboard'}" @click="page='dashboard'">
+                <span class="nav-icon">📊</span> 仪表盘
+            </div>
+            <div class="nav-item" :class="{active: page==='backtest'}" @click="page='backtest'">
+                <span class="nav-icon">🔬</span> 策略回测
+            </div>
+            <div class="nav-item" :class="{active: page==='strategies'}" @click="page='strategies'">
+                <span class="nav-icon">🎯</span> 策略管理
+            </div>
+            <div class="nav-item" :class="{active: page==='data'}" @click="page='data'">
+                <span class="nav-icon">📈</span> 行情数据
+            </div>
+            <div class="nav-item" :class="{active: page==='history'}" @click="page='history'">
+                <span class="nav-icon">📋</span> 回测记录
+            </div>
+        </nav>
+        <div style="color:var(--text-dim);font-size:12px;padding:16px;border-top:1px solid var(--border)">
+            v1.0.0 · fengsentao
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+
+        <!-- ========== 仪表盘 ========== -->
+        <div v-if="page==='dashboard'">
+            <h1 class="page-title">仪表盘</h1>
+            <p class="page-subtitle">量化交易系统总览</p>
+
+            <div class="grid-4">
+                <div class="stat-card">
+                    <div class="stat-label">回测任务</div>
+                    <div class="stat-value">{{ taskList.length }}</div>
+                    <div class="stat-sub">累计执行</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">可用策略</div>
+                    <div class="stat-value">{{ strategies.length }}</div>
+                    <div class="stat-sub">量化策略</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">最近回测</div>
+                    <div class="stat-value" style="font-size:20px">{{ lastResult?.summary?.symbol || '-' }}</div>
+                    <div class="stat-sub">{{ lastResult?.summary?.strategy || '暂无数据' }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">系统状态</div>
+                    <div class="stat-value" style="color:var(--green);font-size:20px">● 运行中</div>
+                    <div class="stat-sub">FastAPI + Vue3</div>
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-top:20px">
+                <div class="card">
+                    <div class="card-title">🚀 快速开始</div>
+                    <div style="color:var(--text-dim);font-size:14px;line-height:2">
+                        <p>1. 点击 <b style="color:var(--accent)">策略回测</b> 选择股票和策略</p>
+                        <p>2. 配置回测参数（资金、费率等）</p>
+                        <p>3. 点击运行，等待回测完成</p>
+                        <p>4. 查看收益曲线、交易记录等分析报告</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">📋 最近任务</div>
+                    <div v-if="taskList.length === 0" class="empty" style="padding:20px">
+                        <p>暂无回测记录</p>
+                    </div>
+                    <div v-else>
+                        <div v-for="t in taskList.slice(-5).reverse()" :key="t.task_id"
+                             style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between">
+                            <span>{{ t.symbol }} · {{ t.strategy }}</span>
+                            <span :style="{color: t.status==='completed'?'var(--green)':t.status==='failed'?'var(--red)':'var(--yellow)'}">
+                                {{ t.status === 'completed' ? '✅ 完成' : t.status === 'failed' ? '❌ 失败' : '⏳ 运行中' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 策略回测 ========== -->
+        <div v-if="page==='backtest'">
+            <h1 class="page-title">策略回测</h1>
+            <p class="page-subtitle">选择股票和策略，运行回测分析</p>
+
+            <div class="grid-2">
+                <!-- Left: Config -->
+                <div>
+                    <div class="card">
+                        <div class="card-title">📌 基本参数</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">股票代码</label>
+                                <input class="form-input" v-model="btForm.symbol" placeholder="如 600036">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">初始资金</label>
+                                <input class="form-input" type="number" v-model.number="btForm.initial_capital">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">开始日期</label>
+                                <input class="form-input" v-model="btForm.start_date" placeholder="YYYYMMDD">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">结束日期</label>
+                                <input class="form-input" v-model="btForm.end_date" placeholder="YYYYMMDD">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">手续费率</label>
+                                <input class="form-input" type="number" step="0.0001" v-model.number="btForm.commission_rate">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">滑点</label>
+                                <input class="form-input" type="number" step="0.0001" v-model.number="btForm.slippage">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">🎯 选择策略</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                            <div v-for="s in strategies" :key="s.id"
+                                 class="strategy-card" :class="{selected: btForm.strategy===s.id}"
+                                 @click="selectStrategy(s)">
+                                <h3>{{ s.name }}</h3>
+                                <p>{{ s.description }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" v-if="currentStrategyParams.length > 0">
+                        <div class="card-title">⚙️ 策略参数</div>
+                        <div class="form-row">
+                            <div class="form-group" v-for="p in currentStrategyParams" :key="p.name">
+                                <label class="form-label">{{ p.label }}</label>
+                                <input class="form-input" :type="p.type==='int'?'number':'number'"
+                                       :step="p.type==='int'?1:0.1"
+                                       v-model.number="btForm.strategy_params[p.name]">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" style="width:100%" @click="runBacktest"
+                            :disabled="backtesting || !btForm.symbol">
+                        <span v-if="backtesting" class="spinner" style="width:16px;height:16px;border-width:2px;margin:0"></span>
+                        {{ backtesting ? '回测中...' : '🚀 运行回测' }}
+                    </button>
+                </div>
+
+                <!-- Right: Results -->
+                <div>
+                    <div v-if="backtesting" class="card">
+                        <div class="card-title">⏳ 回测进度</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" :style="{width: btProgress+'%'}"></div>
+                        </div>
+                        <p style="color:var(--text-dim);font-size:13px;text-align:center">
+                            {{ btProgress }}% - {{ btStatusText }}
+                        </p>
+                    </div>
+
+                    <div v-if="lastResult && !backtesting">
+                        <!-- Summary Stats -->
+                        <div class="grid-2">
+                            <div class="stat-card">
+                                <div class="stat-label">总收益率</div>
+                                <div class="stat-value" :class="lastResult.summary.total_return>=0?'positive':'negative'">
+                                    {{ lastResult.summary.total_return }}%
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">年化收益</div>
+                                <div class="stat-value" :class="lastResult.summary.annual_return>=0?'positive':'negative'">
+                                    {{ lastResult.summary.annual_return }}%
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">最大回撤</div>
+                                <div class="stat-value negative">{{ lastResult.summary.max_drawdown }}%</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">夏普比率</div>
+                                <div class="stat-value">{{ lastResult.summary.sharpe_ratio }}</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">胜率</div>
+                                <div class="stat-value">{{ lastResult.summary.win_rate }}%</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">盈亏比</div>
+                                <div class="stat-value">{{ lastResult.summary.profit_loss_ratio }}</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">交易次数</div>
+                                <div class="stat-value">{{ lastResult.summary.total_trades }}</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">最终资金</div>
+                                <div class="stat-value" style="font-size:20px">¥{{ lastResult.summary.final_equity?.toLocaleString() }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Equity Chart -->
+                        <div class="card" style="margin-top:20px">
+                            <div class="card-title">📈 权益曲线</div>
+                            <div class="chart-container">
+                                <canvas id="equityChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Trades -->
+                        <div class="card" style="margin-top:20px">
+                            <div class="card-title">📋 交易记录 (共 {{ lastResult.trades.length }} 笔)</div>
+                            <div class="table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>日期</th><th>方向</th><th>价格</th>
+                                            <th>数量</th><th>金额</th><th>原因</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(t,i) in lastResult.trades.slice(-20)" :key="i">
+                                            <td>{{ t.date }}</td>
+                                            <td><span class="badge" :class="t.side==='BUY'?'badge-buy':'badge-sell'">{{ t.side==='BUY'?'买入':'卖出' }}</span></td>
+                                            <td>¥{{ t.price }}</td>
+                                            <td>{{ t.shares }}股</td>
+                                            <td>¥{{ t.amount?.toLocaleString() }}</td>
+                                            <td style="color:var(--text-dim);font-size:13px">{{ t.reason }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="!lastResult && !backtesting" class="card">
+                        <div class="empty">
+                            <div class="empty-icon">🔬</div>
+                            <p>选择股票和策略后点击运行回测</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 策略管理 ========== -->
+        <div v-if="page==='strategies'">
+            <h1 class="page-title">策略管理</h1>
+            <p class="page-subtitle">查看和了解所有内置量化策略</p>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:20px">
+                <div v-for="s in strategies" :key="s.id" class="card" style="cursor:pointer"
+                     @click="btForm.strategy=s.id; page='backtest'">
+                    <h3 style="font-size:18px;margin-bottom:8px">{{ s.name }}</h3>
+                    <p style="color:var(--text-dim);font-size:14px;line-height:1.6;margin-bottom:16px">{{ s.description }}</p>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px">
+                        <span v-for="p in s.params" :key="p.name"
+                              style="padding:4px 10px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text-dim)">
+                            {{ p.label }}: {{ p.default }}
+                        </span>
+                    </div>
+                    <div style="margin-top:16px;color:var(--accent);font-size:13px;font-weight:500">点击使用此策略 →</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 行情数据 ========== -->
+        <div v-if="page==='data'">
+            <h1 class="page-title">行情数据</h1>
+            <p class="page-subtitle">查询A股行情和技术指标</p>
+
+            <div class="card">
+                <div class="card-title">🔍 数据查询</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">股票代码</label>
+                        <input class="form-input" v-model="dataForm.symbol" placeholder="如 600036">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">开始日期</label>
+                        <input class="form-input" v-model="dataForm.start_date">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">结束日期</label>
+                        <input class="form-input" v-model="dataForm.end_date">
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:flex-end">
+                        <button class="btn btn-primary" @click="fetchData" :disabled="dataLoading">
+                            {{ dataLoading ? '加载中...' : '查询数据' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="stockData" class="card">
+                <div class="card-title">📊 {{ dataForm.symbol }} 行情数据 ({{ stockData.count }}条)</div>
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+                <div class="table-wrapper" style="margin-top:16px;max-height:400px;overflow-y:auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>日期</th><th>开盘</th><th>最高</th><th>最低</th><th>收盘</th><th>成交量</th>
+                                <th v-if="stockData.data[0]?.sma_5">MA5</th>
+                                <th v-if="stockData.data[0]?.rsi">RSI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(d,i) in stockData.data.slice(-50).reverse()" :key="i">
+                                <td>{{ d.date }}</td>
+                                <td>{{ d.open?.toFixed(2) }}</td>
+                                <td>{{ d.high?.toFixed(2) }}</td>
+                                <td>{{ d.low?.toFixed(2) }}</td>
+                                <td style="font-weight:600">{{ d.close?.toFixed(2) }}</td>
+                                <td style="color:var(--text-dim)">{{ d.volume?.toLocaleString() }}</td>
+                                <td v-if="d.sma_5">{{ d.sma_5?.toFixed(2) }}</td>
+                                <td v-if="d.rsi">{{ d.rsi?.toFixed(1) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 回测记录 ========== -->
+        <div v-if="page==='history'">
+            <h1 class="page-title">回测记录</h1>
+            <p class="page-subtitle">查看所有历史回测任务</p>
+
+            <div class="card" v-if="taskList.length === 0">
+                <div class="empty">
+                    <div class="empty-icon">📋</div>
+                    <p>暂无回测记录</p>
+                    <button class="btn btn-primary" style="margin-top:16px" @click="page='backtest'">去回测</button>
+                </div>
+            </div>
+
+            <div class="card" v-else>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr><th>任务ID</th><th>股票</th><th>策略</th><th>状态</th><th>创建时间</th><th>操作</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="t in taskList.slice().reverse()" :key="t.task_id">
+                                <td style="font-family:monospace">{{ t.task_id }}</td>
+                                <td style="font-weight:600">{{ t.symbol }}</td>
+                                <td>{{ t.strategy }}</td>
+                                <td>
+                                    <span :style="{color: t.status==='completed'?'var(--green)':t.status==='failed'?'var(--red)':'var(--yellow)'}">
+                                        {{ t.status === 'completed' ? '✅ 完成' : t.status === 'failed' ? '❌ 失败' : '⏳ 运行中' }}
+                                    </span>
+                                </td>
+                                <td style="color:var(--text-dim);font-size:13px">{{ t.created_at?.substring(0,16) }}</td>
+                                <td>
+                                    <button v-if="t.status==='completed'" class="btn btn-outline" style="padding:6px 12px;font-size:12px"
+                                            @click="loadTaskResult(t.task_id)">查看详情</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script>
+const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
+
+createApp({
+    setup() {
+        const page = ref('dashboard');
+        const strategies = ref([]);
+        const taskList = ref([]);
+        const lastResult = ref(null);
+
+        // Backtest form
+        const btForm = ref({
+            symbol: '600036',
+            strategy: 'dualma',
+            start_date: '20220101',
+            end_date: '20251231',
+            initial_capital: 1000000,
+            commission_rate: 0.0003,
+            stamp_tax_rate: 0.0005,
+            slippage: 0.001,
+            strategy_params: {},
+        });
+        const backtesting = ref(false);
+        const btProgress = ref(0);
+        const btStatusText = ref('');
+
+        // Data form
+        const dataForm = ref({ symbol: '600036', start_date: '20230101', end_date: '20251231' });
+        const dataLoading = ref(false);
+        const stockData = ref(null);
+
+        const API = window.location.origin.includes('localhost') || window.location.origin.includes('0.0.0.0')
+            ? 'http://localhost:8000' : '';
+
+        const currentStrategyParams = computed(() => {
+            const s = strategies.value.find(s => s.id === btForm.value.strategy);
+            return s ? s.params : [];
+        });
+
+        // Init strategy params
+        function selectStrategy(s) {
+            btForm.value.strategy = s.id;
+            btForm.value.strategy_params = {};
+            s.params.forEach(p => { btForm.value.strategy_params[p.name] = p.default; });
+        }
+
+        async function loadStrategies() {
+            try {
+                const res = await fetch(`${API}/api/strategies`);
+                const data = await res.json();
+                strategies.value = data.strategies;
+                // Init params for default strategy
+                if (strategies.value.length > 0) {
+                    const s = strategies.value.find(s => s.id === btForm.value.strategy) || strategies.value[0];
+                    selectStrategy(s);
+                }
+            } catch(e) { console.error('加载策略失败:', e); }
+        }
+
+        async function runBacktest() {
+            if (!btForm.value.symbol) return;
+            backtesting.value = true;
+            btProgress.value = 0;
+            btStatusText.value = '提交任务...';
+            lastResult.value = null;
+
+            try {
+                const res = await fetch(`${API}/api/backtest`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(btForm.value),
+                });
+                const { task_id } = await res.json();
+                btStatusText.value = '回测运行中...';
+
+                // Poll
+                const poll = setInterval(async () => {
+                    try {
+                        const r = await fetch(`${API}/api/backtest/${task_id}`);
+                        const t = await r.json();
+                        btProgress.value = t.progress || 0;
+                        if (t.status === 'completed') {
+                            clearInterval(poll);
+                            lastResult.value = t;
+                            backtesting.value = false;
+                            btStatusText.value = '完成!';
+                            loadTaskList();
+                            nextTick(() => drawEquityChart(t.equity_curve));
+                        } else if (t.status === 'failed') {
+                            clearInterval(poll);
+                            backtesting.value = false;
+                            btStatusText.value = '失败: ' + (t.error || '未知错误');
+                        }
+                    } catch(e) { console.error(e); }
+                }, 1000);
+            } catch(e) {
+                backtesting.value = false;
+                alert('回测提交失败: ' + e.message);
+            }
+        }
+
+        function drawEquityChart(curve) {
+            const canvas = document.getElementById('equityChart');
+            if (!canvas || !curve || curve.length === 0) return;
+            if (canvas._chart) canvas._chart.destroy();
+
+            const labels = curve.map(c => c.date);
+            const equity = curve.map(c => c.equity);
+
+            canvas._chart = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: '权益',
+                        data: equity,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99,102,241,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => '¥' + ctx.parsed.y.toLocaleString()
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { display: true, ticks: { maxTicksLimit: 10, color: '#8b8fa3' }, grid: { color: '#2a2e3f' } },
+                        y: { ticks: { color: '#8b8fa3', callback: v => '¥' + (v/10000).toFixed(0) + '万' }, grid: { color: '#2a2e3f' } },
+                    }
+                }
+            });
+        }
+
+        function drawPriceChart(data) {
+            const canvas = document.getElementById('priceChart');
+            if (!canvas || !data || data.length === 0) return;
+            if (canvas._chart) canvas._chart.destroy();
+
+            const labels = data.map(d => d.date);
+            const close = data.map(d => d.close);
+            const sma5 = data.map(d => d.sma_5);
+            const sma20 = data.map(d => d.sma_20);
+
+            canvas._chart = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: '收盘价', data: close, borderColor: '#e4e6ed', borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
+                        { label: 'MA5', data: sma5, borderColor: '#6366f1', borderWidth: 1, pointRadius: 0, tension: 0.1 },
+                        { label: 'MA20', data: sma20, borderColor: '#eab308', borderWidth: 1, pointRadius: 0, tension: 0.1 },
+                    ].filter(d => d.data.some(v => v != null))
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#8b8fa3' } } },
+                    scales: {
+                        x: { ticks: { maxTicksLimit: 10, color: '#8b8fa3' }, grid: { color: '#2a2e3f' } },
+                        y: { ticks: { color: '#8b8fa3' }, grid: { color: '#2a2e3f' } },
+                    }
+                }
+            });
+        }
+
+        async function fetchData() {
+            dataLoading.value = true;
+            try {
+                const res = await fetch(`${API}/api/data/indicators?symbol=${dataForm.value.symbol}&start_date=${dataForm.value.start_date}&end_date=${dataForm.value.end_date}`, { method: 'POST' });
+                if (!res.ok) throw new Error('数据获取失败');
+                stockData.value = await res.json();
+                nextTick(() => drawPriceChart(stockData.value.data));
+            } catch(e) { alert(e.message); }
+            dataLoading.value = false;
+        }
+
+        async function loadTaskList() {
+            try {
+                const res = await fetch(`${API}/api/backtest/list`);
+                const data = await res.json();
+                taskList.value = data.tasks;
+            } catch(e) {}
+        }
+
+        async function loadTaskResult(taskId) {
+            try {
+                const res = await fetch(`${API}/api/backtest/${taskId}`);
+                const data = await res.json();
+                lastResult.value = data;
+                page.value = 'backtest';
+                nextTick(() => drawEquityChart(data.equity_curve));
+            } catch(e) { alert('加载失败'); }
+        }
+
+        onMounted(() => {
+            loadStrategies();
+            loadTaskList();
+        });
+
+        return {
+            page, strategies, taskList, lastResult,
+            btForm, backtesting, btProgress, btStatusText,
+            dataForm, dataLoading, stockData,
+            currentStrategyParams,
+            selectStrategy, runBacktest, fetchData, loadTaskResult,
+        };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
