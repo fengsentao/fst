@@ -202,6 +202,21 @@ async def run_backtest(req: BacktestRequest, background_tasks: BackgroundTasks):
     return {"task_id": task_id, "status": "running"}
 
 
+@app.get("/api/backtest/list")
+async def list_backtest_tasks():
+    """列出所有回测任务"""
+    tasks = []
+    for tid, task in backtest_tasks.items():
+        tasks.append({
+            "task_id": tid,
+            "status": task.get("status", "unknown"),
+            "symbol": task.get("symbol", ""),
+            "strategy": task.get("strategy", ""),
+            "created_at": task.get("created_at", ""),
+        })
+    return {"tasks": tasks}
+
+
 @app.get("/api/backtest/{task_id}")
 async def get_backtest_result(task_id: str):
     """获取回测结果"""
@@ -289,21 +304,6 @@ async def compute_indicators(symbol: str, start_date: str = "20220101",
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/backtest/list")
-async def list_backtest_tasks():
-    """列出所有回测任务"""
-    tasks = []
-    for tid, task in backtest_tasks.items():
-        tasks.append({
-            "task_id": tid,
-            "status": task.get("status", "unknown"),
-            "symbol": task.get("symbol", ""),
-            "strategy": task.get("strategy", ""),
-            "created_at": task.get("created_at", ""),
-        })
-    return {"tasks": tasks}
 
 
 # ------------------------------------------------------------------
