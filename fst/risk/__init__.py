@@ -68,7 +68,8 @@ class RiskManager:
         # 2. 检查单票仓位
         existing = positions.get(signal.symbol)
         if existing:
-            new_position_pct = (existing.market_value + signal.price * signal.shares) / equity
+            # signal.target_pct 是目标仓位比例
+            new_position_pct = max(existing.market_value / equity, signal.target_pct) if equity > 0 else signal.target_pct
         else:
             new_position_pct = signal.target_pct
 
