@@ -1,0 +1,30 @@
+data:
+  source: akshare          # akshare / tushare
+  tushare_token: ""        # tushare token (使用tushare时填写)
+  cache_dir: ./data_cache  # 数据缓存目录
+  start_date: "20200101"
+  end_date: ""
+
+backtest:
+  initial_capital: 1000000  # 初始资金 100万
+  commission_rate: 0.0003   # 手续费 万三
+  stamp_tax_rate: 0.0005    # 印花税 万五 (仅卖出)
+  slippage: 0.001           # 滑点 0.1%
+  benchmark: "000300"       # 基准指数 沪深300
+
+risk:
+  max_position_pct: 0.25       # 单票最大仓位 25%
+  max_total_position_pct: 0.80 # 最大总仓位 80%
+  max_daily_loss_pct: 0.03     # 日最大亏损 3%
+  max_drawdown_pct: 0.15       # 最大回撤 15%
+  stop_loss_pct: 0.08          # 止损 8%
+  take_profit_pct: 0.20        # 止盈 20%
+  max_open_orders: 5           # 最大挂单数
+
+broker:
+  name: simulated    # simulated(模拟) / eastmoney / ths
+  api_key: ""
+  api_secret: ""
+  account_id: ""
+
+log_level: INFO
