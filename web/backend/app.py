@@ -412,14 +412,24 @@ def _run_backtest_task(task_id: str, req: BacktestRequest):
         # 获取数据
         data = pd.DataFrame()
 
-        # 方法1: akshare
+        # 方法1: akshare (带超时，使用线程)
         try:
-            fetcher = DataFetcher(source="akshare", cache_dir="./data_cache")
-            data = fetcher.get_stock_daily(
-                req.symbol, req.start_date, req.end_date, adjust="qfq"
-            )
+            import concurrent.futures
+            def fetch_data():
+                fetcher = DataFetcher(source="akshare", cache_dir="./data_cache")
+                return fetcher.get_stock_daily(
+                    req.symbol, req.start_date, req.end_date, adjust="qfq"
+                )
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(fetch_data)
+                try:
+                    data = future.result(timeout=10)
+                except concurrent.futures.TimeoutError:
+                    print("akshare获取超时(10s)，使用模拟数据")
+                except Exception as e:
+                    print(f"akshare获取数据失败: {e}")
         except Exception as e:
-            print(f"akshare获取数据失败: {e}")
+            print(f"akshare线程执行失败: {e}")
 
         # 方法2: 模拟数据
         if data.empty:
@@ -503,6 +513,8 @@ def _run_backtest_task(task_id: str, req: BacktestRequest):
         })
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         backtest_tasks[task_id]["status"] = "failed"
         backtest_tasks[task_id]["error"] = str(e)
 
