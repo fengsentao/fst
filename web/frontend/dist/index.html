@@ -20,14 +20,15 @@
         body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
 
         /* ===== Login ===== */
-        .login-page { display:flex; align-items:center; justify-content:center; min-height:100vh; }
+        .login-page { position:fixed; top:0; left:0; width:100vw; height:100vh;
+                      display:flex; align-items:center; justify-content:center;
+                      background:var(--bg); z-index:9999; }
         .login-box { background:var(--bg-card); border:1px solid var(--border); border-radius:16px;
                      padding:48px 40px; width:400px; box-shadow:0 8px 40px rgba(0,0,0,0.4); }
         .login-logo { font-size:28px; font-weight:700; color:var(--accent); text-align:center; margin-bottom:8px; }
         .login-sub { color:var(--text-dim); font-size:14px; text-align:center; margin-bottom:32px; }
         .login-error { background:var(--red-dim); color:var(--red); padding:10px 14px; border-radius:8px;
                        font-size:13px; margin-bottom:16px; }
-        .login-footer { text-align:center; margin-top:24px; font-size:12px; color:var(--text-dim); }
 
         /* ===== Layout ===== */
         #app { display:flex; min-height:100vh; }
@@ -137,7 +138,6 @@
                 <span v-if="loginLoading" class="spinner"></span>
                 {{ loginLoading ? '登录中...' : '登 录' }}
             </button>
-            <div class="login-footer">默认账号: admin / fst@2024</div>
         </div>
     </div>
 
