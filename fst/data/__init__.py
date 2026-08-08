@@ -148,6 +148,11 @@ class DataFetcher:
         adjust_map = {"qfq": "qfq", "hfq": "hfq", "": ""}
         ak_adjust = adjust_map.get(adjust, "qfq")
 
+        # 格式化日期为 YYYY-MM-DD
+        sd = f"{start_date[:4]}-{start_date[4:6]}-{start_date[6:8]}"
+        ed = f"{end_date[:4]}-{end_date[4:6]}-{end_date[6:8]}"
+
+        # 方法1: stock_zh_a_hist (东方财富，可能被墙)
         try:
             df = ak.stock_zh_a_hist(
                 symbol=symbol,
@@ -156,27 +161,44 @@ class DataFetcher:
                 end_date=end_date,
                 adjust=ak_adjust,
             )
+            if df is not None and not df.empty:
+                df = df.rename(columns={
+                    "日期": "date", "开盘": "open", "收盘": "close",
+                    "最高": "high", "最低": "low", "成交量": "volume",
+                    "成交额": "amount", "换手率": "turnover", "涨跌幅": "pct_change",
+                })
+                df["date"] = pd.to_datetime(df["date"])
+                df = df.sort_values("date").reset_index(drop=True)
+                return df
         except Exception as e:
-            logger.error(f"akshare 获取 {symbol} 数据失败: {e}")
-            return pd.DataFrame()
+            logger.warning(f"stock_zh_a_hist 失败: {e}")
 
-        if df is None or df.empty:
-            return pd.DataFrame()
+        # 方法2: stock_zh_a_daily (网易，备用)
+        try:
+            # 需要加市场前缀
+            if symbol.startswith("6") or symbol.startswith("9"):
+                full_symbol = f"sh{symbol}"
+            else:
+                full_symbol = f"sz{symbol}"
 
-        df = df.rename(columns={
-            "日期": "date",
-            "开盘": "open",
-            "收盘": "close",
-            "最高": "high",
-            "最低": "low",
-            "成交量": "volume",
-            "成交额": "amount",
-            "换手率": "turnover",
-            "涨跌幅": "pct_change",
-        })
-        df["date"] = pd.to_datetime(df["date"])
-        df = df.sort_values("date").reset_index(drop=True)
-        return df
+            df = ak.stock_zh_a_daily(
+                symbol=full_symbol,
+                start_date=sd,
+                end_date=ed,
+                adjust=ak_adjust,
+            )
+            if df is not None and not df.empty:
+                df["date"] = pd.to_datetime(df["date"])
+                df = df.sort_values("date").reset_index(drop=True)
+                # 确保列名一致
+                for col in ["open", "high", "low", "close", "volume"]:
+                    if col not in df.columns:
+                        df[col] = 0
+                return df[["date", "open", "high", "low", "close", "volume"]]
+        except Exception as e:
+            logger.warning(f"stock_zh_a_daily 也失败: {e}")
+
+        return pd.DataFrame()
 
     def _akshare_index_daily(self, index_code: str, start_date: str,
                               end_date: str) -> pd.DataFrame:
