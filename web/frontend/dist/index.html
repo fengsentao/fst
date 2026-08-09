@@ -69,6 +69,7 @@
             border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:14px;
             outline:none; transition:border 0.2s; }
         .form-input:focus, .form-select:focus { border-color:var(--accent); }
+        .form-input[type="date"] { color-scheme: dark; }
         .form-row { display:flex; gap:12px; }
         .form-row .form-group { flex:1; }
 
@@ -256,11 +257,11 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label class="form-label">开始日期</label>
-                                    <input class="form-input" v-model="btForm.start_date">
+                                    <input class="form-input" type="date" v-model="btForm.start_date">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">结束日期</label>
-                                    <input class="form-input" v-model="btForm.end_date">
+                                    <input class="form-input" type="date" v-model="btForm.end_date">
                                 </div>
                             </div>
                             <div class="form-row">
@@ -421,11 +422,11 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">开始日期</label>
-                            <input class="form-input" v-model="dataForm.start_date">
+                            <input class="form-input" type="date" v-model="dataForm.start_date">
                         </div>
                         <div class="form-group">
                             <label class="form-label">结束日期</label>
-                            <input class="form-input" v-model="dataForm.end_date">
+                            <input class="form-input" type="date" v-model="dataForm.end_date">
                         </div>
                         <div class="form-group" style="display:flex;align-items:flex-end">
                             <button class="btn btn-primary" @click="fetchData" :disabled="dataLoading">
@@ -563,13 +564,13 @@ createApp({
         const taskList = ref([]);
         const lastResult = ref(null);
         const btForm = ref({
-            symbol:'600036', strategy:'dualma', start_date:'20220101', end_date:'20251231',
+            symbol:'600036', strategy:'dualma', start_date:'2022-01-01', end_date:'2025-12-31',
             initial_capital:1000000, commission_rate:0.0003, stamp_tax_rate:0.0005, slippage:0.001,
             strategy_params:{},
         });
         const backtesting = ref(false);
         const btProgress = ref(0);
-        const dataForm = ref({ symbol:'600036', start_date:'20230101', end_date:'20251231' });
+        const dataForm = ref({ symbol:'600036', start_date:'2023-01-01', end_date:'2025-12-31' });
         const dataLoading = ref(false);
         const stockData = ref(null);
         
@@ -621,6 +622,9 @@ createApp({
             dataStockResults.value = [];
         }
 
+        // Date format helper: YYYY-MM-DD → YYYYMMDD
+        function toApiDate(d) { return d ? d.replace(/-/g, '') : ''; }
+
         const currentStrategyParams = computed(() => {
             const s = strategies.value.find(s => s.id === btForm.value.strategy);
             return s ? s.params : [];
@@ -647,8 +651,13 @@ createApp({
             if (!btForm.value.symbol) return;
             backtesting.value = true; btProgress.value = 0; lastResult.value = null;
             try {
+                const payload = {
+                    ...btForm.value,
+                    start_date: toApiDate(btForm.value.start_date),
+                    end_date: toApiDate(btForm.value.end_date),
+                };
                 const data = await apiFetch('/api/backtest', {
-                    method: 'POST', body: JSON.stringify(btForm.value),
+                    method: 'POST', body: JSON.stringify(payload),
                 });
                 const poll = setInterval(async () => {
                     try {
@@ -688,7 +697,9 @@ createApp({
         async function fetchData() {
             dataLoading.value = true;
             try {
-                const data = await apiFetch(`/api/data/indicators?symbol=${dataForm.value.symbol}&start_date=${dataForm.value.start_date}&end_date=${dataForm.value.end_date}`, {method:'POST'});
+                const sd = toApiDate(dataForm.value.start_date);
+                const ed = toApiDate(dataForm.value.end_date);
+                const data = await apiFetch(`/api/data/indicators?symbol=${dataForm.value.symbol}&start_date=${sd}&end_date=${ed}`, {method:'POST'});
                 stockData.value = data;
                 nextTick(() => {
                     const canvas = document.getElementById('priceChart');
