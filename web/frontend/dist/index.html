@@ -232,9 +232,21 @@
                         <div class="card">
                             <div class="card-title">📌 基本参数</div>
                             <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label">股票代码</label>
-                                    <input class="form-input" v-model="btForm.symbol" placeholder="如 600036">
+                                <div class="form-group" style="position:relative">
+                                    <label class="form-label">股票代码/名称</label>
+                                    <input class="form-input" v-model="btForm.symbol" 
+                                           @input="searchStocks" 
+                                           placeholder="输入代码或名称搜索"
+                                           @focus="showStockDropdown=true">
+                                    <div v-if="showStockDropdown && stockResults.length > 0" 
+                                         style="position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto;z-index:100">
+                                        <div v-for="s in stockResults" :key="s.code"
+                                             style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border)"
+                                             @click="selectStock(s)">
+                                            <span style="font-weight:600">{{ s.code }}</span>
+                                            <span style="color:var(--text-dim);margin-left:8px">{{ s.name }}</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">初始资金</label>
@@ -391,9 +403,21 @@
                 <div class="card">
                     <div class="card-title">🔍 数据查询</div>
                     <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">股票代码</label>
-                            <input class="form-input" v-model="dataForm.symbol" placeholder="如 600036">
+                        <div class="form-group" style="position:relative">
+                            <label class="form-label">股票代码/名称</label>
+                            <input class="form-input" v-model="dataForm.symbol"
+                                   @input="searchDataStocks"
+                                   placeholder="输入代码或名称搜索"
+                                   @focus="showDataDropdown=true">
+                            <div v-if="showDataDropdown && dataStockResults.length > 0"
+                                 style="position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto;z-index:100">
+                                <div v-for="s in dataStockResults" :key="s.code"
+                                     style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border)"
+                                     @click="selectDataStock(s)">
+                                    <span style="font-weight:600">{{ s.code }}</span>
+                                    <span style="color:var(--text-dim);margin-left:8px">{{ s.name }}</span>
+                                </div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">开始日期</label>
@@ -548,6 +572,54 @@ createApp({
         const dataForm = ref({ symbol:'600036', start_date:'20230101', end_date:'20251231' });
         const dataLoading = ref(false);
         const stockData = ref(null);
+        
+        // 股票搜索
+        const stockResults = ref([]);
+        const showStockDropdown = ref(false);
+        
+        async function searchStocks() {
+            const q = btForm.value.symbol;
+            if (!q || q.length < 1) {
+                stockResults.value = [];
+                return;
+            }
+            try {
+                const res = await apiFetch(`/api/stocks?q=${encodeURIComponent(q)}`);
+                stockResults.value = res.stocks || [];
+            } catch (e) {
+                console.error('搜索失败:', e);
+            }
+        }
+        
+        function selectStock(stock) {
+            btForm.value.symbol = stock.code;
+            showStockDropdown.value = false;
+            stockResults.value = [];
+        }
+
+        // Data page stock search
+        const dataStockResults = ref([]);
+        const showDataDropdown = ref(false);
+
+        async function searchDataStocks() {
+            const q = dataForm.value.symbol;
+            if (!q || q.length < 1) {
+                dataStockResults.value = [];
+                return;
+            }
+            try {
+                const res = await apiFetch(`/api/stocks?q=${encodeURIComponent(q)}`);
+                dataStockResults.value = res.stocks || [];
+            } catch (e) {
+                console.error('搜索失败:', e);
+            }
+        }
+
+        function selectDataStock(stock) {
+            dataForm.value.symbol = stock.code;
+            showDataDropdown.value = false;
+            dataStockResults.value = [];
+        }
 
         const currentStrategyParams = computed(() => {
             const s = strategies.value.find(s => s.id === btForm.value.strategy);
@@ -659,6 +731,8 @@ createApp({
             doLogin, doLogout, page, strategies, taskList, lastResult,
             btForm, backtesting, btProgress, dataForm, dataLoading, stockData,
             currentStrategyParams, selectStrategy, runBacktest, fetchData, loadTaskResult,
+            stockResults, showStockDropdown, searchStocks, selectStock,
+            dataStockResults, showDataDropdown, searchDataStocks, selectDataStock,
         };
     }
 }).mount('#app');
