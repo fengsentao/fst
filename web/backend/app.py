@@ -285,6 +285,164 @@ async def list_strategies(user=Depends(get_current_user)):
     return {"strategies": result}
 
 
+# ------------------------------------------------------------------
+# 股票列表（支持名称搜索）
+# ------------------------------------------------------------------
+
+STOCK_LIST = [
+    {"code": "600000", "name": "浦发银行"},
+    {"code": "600009", "name": "上海机场"},
+    {"code": "600016", "name": "民生银行"},
+    {"code": "600028", "name": "中国石化"},
+    {"code": "600030", "name": "中信证券"},
+    {"code": "600031", "name": "三一重工"},
+    {"code": "600036", "name": "招商银行"},
+    {"code": "600048", "name": "保利发展"},
+    {"code": "600050", "name": "中国联通"},
+    {"code": "600085", "name": "同仁堂"},
+    {"code": "600104", "name": "上汽集团"},
+    {"code": "600111", "name": "北方稀土"},
+    {"code": "600115", "name": "东方航空"},
+    {"code": "600132", "name": "重庆啤酒"},
+    {"code": "600150", "name": "中国船舶"},
+    {"code": "600176", "name": "中国巨石"},
+    {"code": "600183", "name": "生益科技"},
+    {"code": "600196", "name": "复星医药"},
+    {"code": "600276", "name": "恒瑞医药"},
+    {"code": "600309", "name": "万华化学"},
+    {"code": "600346", "name": "恒力石化"},
+    {"code": "600352", "name": "浙江龙盛"},
+    {"code": "600406", "name": "国电南瑞"},
+    {"code": "600436", "name": "片仔癀"},
+    {"code": "600438", "name": "通威股份"},
+    {"code": "600519", "name": "贵州茅台"},
+    {"code": "600547", "name": "山东黄金"},
+    {"code": "600570", "name": "恒生电子"},
+    {"code": "600585", "name": "海螺水泥"},
+    {"code": "600588", "name": "用友网络"},
+    {"code": "600600", "name": "青岛啤酒"},
+    {"code": "600660", "name": "福耀玻璃"},
+    {"code": "600690", "name": "海尔智家"},
+    {"code": "600703", "name": "三安光电"},
+    {"code": "600741", "name": "华域汽车"},
+    {"code": "600809", "name": "山西汾酒"},
+    {"code": "600837", "name": "海通证券"},
+    {"code": "600887", "name": "伊利股份"},
+    {"code": "600893", "name": "航发动力"},
+    {"code": "600900", "name": "长江电力"},
+    {"code": "600919", "name": "江苏银行"},
+    {"code": "600926", "name": "杭州银行"},
+    {"code": "600941", "name": "中国移动"},
+    {"code": "601012", "name": "隆基绿能"},
+    {"code": "601066", "name": "中信建投"},
+    {"code": "601088", "name": "中国神华"},
+    {"code": "601111", "name": "中国国航"},
+    {"code": "601138", "name": "工业富联"},
+    {"code": "601166", "name": "兴业银行"},
+    {"code": "601186", "name": "中国铁建"},
+    {"code": "601211", "name": "国泰君安"},
+    {"code": "601225", "name": "陕西煤业"},
+    {"code": "601288", "name": "农业银行"},
+    {"code": "601318", "name": "中国平安"},
+    {"code": "601328", "name": "交通银行"},
+    {"code": "601336", "name": "新华保险"},
+    {"code": "601390", "name": "中国中铁"},
+    {"code": "601398", "name": "工商银行"},
+    {"code": "601601", "name": "中国太保"},
+    {"code": "601628", "name": "中国人寿"},
+    {"code": "601633", "name": "长城汽车"},
+    {"code": "601668", "name": "中国建筑"},
+    {"code": "601688", "name": "华泰证券"},
+    {"code": "601766", "name": "中国中车"},
+    {"code": "601788", "name": "光大证券"},
+    {"code": "601818", "name": "光大银行"},
+    {"code": "601857", "name": "中国石油"},
+    {"code": "601881", "name": "中国银河"},
+    {"code": "601888", "name": "中国中免"},
+    {"code": "601899", "name": "紫金矿业"},
+    {"code": "601919", "name": "中远海控"},
+    {"code": "601985", "name": "中国核电"},
+    {"code": "601988", "name": "中国银行"},
+    {"code": "603019", "name": "中科曙光"},
+    {"code": "603259", "name": "药明康德"},
+    {"code": "603288", "name": "海天味业"},
+    {"code": "603501", "name": "韦尔股份"},
+    {"code": "000001", "name": "平安银行"},
+    {"code": "000002", "name": "万科A"},
+    {"code": "000063", "name": "中兴通讯"},
+    {"code": "000100", "name": "TCL科技"},
+    {"code": "000157", "name": "中联重科"},
+    {"code": "000333", "name": "美的集团"},
+    {"code": "000338", "name": "潍柴动力"},
+    {"code": "000425", "name": "徐工机械"},
+    {"code": "000538", "name": "云南白药"},
+    {"code": "000568", "name": "泸州老窖"},
+    {"code": "000596", "name": "古井贡酒"},
+    {"code": "000625", "name": "长安汽车"},
+    {"code": "000651", "name": "格力电器"},
+    {"code": "000661", "name": "长春高新"},
+    {"code": "000725", "name": "京东方A"},
+    {"code": "000776", "name": "广发证券"},
+    {"code": "000858", "name": "五粮液"},
+    {"code": "000895", "name": "双汇发展"},
+    {"code": "000938", "name": "紫光股份"},
+    {"code": "000977", "name": "浪潮信息"},
+    {"code": "002001", "name": "新和成"},
+    {"code": "002027", "name": "分众传媒"},
+    {"code": "002049", "name": "紫光国微"},
+    {"code": "002142", "name": "宁波银行"},
+    {"code": "002230", "name": "科大讯飞"},
+    {"code": "002304", "name": "洋河股份"},
+    {"code": "002352", "name": "顺丰控股"},
+    {"code": "002371", "name": "北方华创"},
+    {"code": "002415", "name": "海康威视"},
+    {"code": "002460", "name": "赣锋锂业"},
+    {"code": "002475", "name": "立讯精密"},
+    {"code": "002594", "name": "比亚迪"},
+    {"code": "002714", "name": "牧原股份"},
+    {"code": "300015", "name": "爱尔眼科"},
+    {"code": "300059", "name": "东方财富"},
+    {"code": "300122", "name": "智飞生物"},
+    {"code": "300124", "name": "汇川技术"},
+    {"code": "300274", "name": "阳光电源"},
+    {"code": "300750", "name": "宁德时代"},
+    {"code": "300760", "name": "迈瑞医疗"},
+]
+
+_stock_list_cache = None
+
+def _load_stock_list():
+    """动态加载A股股票列表"""
+    global _stock_list_cache
+    if _stock_list_cache is not None:
+        return _stock_list_cache
+    try:
+        import akshare as ak
+        df = ak.stock_info_a_code_name()
+        _stock_list_cache = [{"code": row["code"], "name": row["name"]} for _, row in df.iterrows()]
+        print(f"已加载 {len(_stock_list_cache)} 只A股股票")
+    except Exception as e:
+        print(f"加载股票列表失败: {e}，使用内置列表")
+        _stock_list_cache = STOCK_LIST
+    return _stock_list_cache
+
+
+@app.get("/api/stocks")
+async def search_stocks(q: str = "", user=Depends(get_current_user)):
+    """搜索股票（支持代码和名称模糊匹配）"""
+    stocks = _load_stock_list()
+    if not q:
+        return {"stocks": stocks[:20]}
+    q_lower = q.lower()
+    results = []
+    for stock in stocks:
+        if q_lower in stock["code"].lower() or q_lower in stock["name"].lower():
+            results.append(stock)
+        if len(results) >= 20:
+            break
+    return {"stocks": results}
+
+
 @app.post("/api/backtest")
 async def run_backtest(req: BacktestRequest, background_tasks: BackgroundTasks,
                        user=Depends(get_current_user)):
